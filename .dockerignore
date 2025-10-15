@@ -1,0 +1,16 @@
+.idea
+.git
+.github
+
+.dockerignore
+.env
+.env.example
+.golangci.yml
+.gitignore
+
+coverage.txt
+
+docker-compose.yml
+
+Makefile
+README*

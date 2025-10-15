@@ -1,0 +1,41 @@
+services:
+  cms:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    networks:
+      - postgres-db-network
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "${CMS_PORT}:8501"
+
+  db:
+    image: postgres:latest
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    networks:
+      - postgres-db-network
+
+volumes:
+  dbdata:
+
+networks:
+  postgres-db-network:
+    driver: bridge
