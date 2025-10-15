@@ -1,0 +1,85 @@
+basePath: /api/v1
+definitions:
+  request.Auth:
+    properties:
+      password:
+        example: Uuk2019Tyu
+        type: string
+      username:
+        example: Naruto
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  response.ErrorResponse:
+    properties:
+      meta:
+        $ref: '#/definitions/response.Meta'
+    type: object
+  response.LoginSuccessData:
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+        type: string
+    type: object
+  response.LoginSuccessResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.LoginSuccessData'
+      meta:
+        $ref: '#/definitions/response.Meta'
+    type: object
+  response.Meta:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  title: Cms API API
+  version: 0.0.1
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with username and password, returning a JWT token
+        if valid.
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.Auth'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JWT token
+          schema:
+            $ref: '#/definitions/response.LoginSuccessResponse'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Invalid username or password
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: User login
+      tags:
+      - Auth
+swagger: "2.0"

@@ -2,31 +2,35 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/Masterminds/squirrel"
-	"github.com/jackc/pgx/v4/pgxpool"
+	// Import postgres driver.
+	_ "github.com/lib/pq"
 )
 
 const (
-	_defaultMaxPoolSize  = 1
-	_defaultConnAttempts = 10
-	_defaultConnTimeout  = time.Second
+	_defaultMaxPoolSize     = 1
+	_defaultConnAttempts    = 10
+	_defaultConnTimeout     = time.Second
+	_defaultPingTimeout     = 2 * time.Second
+	_defaultConnMaxLifetime = 5 * time.Minute
 )
 
-// Postgres -.
+// Postgres represents a PostgreSQL connection handler.
 type Postgres struct {
 	maxPoolSize  int
 	connAttempts int
 	connTimeout  time.Duration
 
 	Builder squirrel.StatementBuilderType
-	Pool    *pgxpool.Pool
+	DB      *sql.DB
 }
 
-// New -.
+// New initializes a new Postgres connection.
 func New(url string, opts ...Option) (*Postgres, error) {
 	pg := &Postgres{
 		maxPoolSize:  _defaultMaxPoolSize,
@@ -34,43 +38,59 @@ func New(url string, opts ...Option) (*Postgres, error) {
 		connTimeout:  _defaultConnTimeout,
 	}
 
-	// Custom options
 	for _, opt := range opts {
 		opt(pg)
 	}
 
 	pg.Builder = squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 
-	poolConfig, err := pgxpool.ParseConfig(url)
-	if err != nil {
-		return nil, fmt.Errorf("postgres - NewPostgres - pgxpool.ParseConfig: %w", err)
-	}
+	var db *sql.DB
 
-	poolConfig.MaxConns = int32(pg.maxPoolSize)
+	var err error
 
-	for pg.connAttempts > 0 {
-		pg.Pool, err = pgxpool.ConnectConfig(context.Background(), poolConfig)
-		if err == nil {
-			break
+	for attempt := 1; attempt <= pg.connAttempts; attempt++ {
+		db, err = sql.Open("postgres", url)
+		if err != nil {
+			log.Printf("Postgres connection failed (attempt %d/%d): %v", attempt, pg.connAttempts, err)
+			time.Sleep(pg.connTimeout)
+
+			continue
 		}
 
-		log.Printf("Postgres is trying to connect, attempts left: %d", pg.connAttempts)
+		ctx, cancel := context.WithTimeout(context.Background(), _defaultPingTimeout)
+		err = db.PingContext(ctx)
 
-		time.Sleep(pg.connTimeout)
+		cancel()
 
-		pg.connAttempts--
+		if err != nil {
+			log.Printf("Postgres ping failed (attempt %d/%d): %v", attempt, pg.connAttempts, err)
+
+			_ = db.Close()
+
+			time.Sleep(pg.connTimeout)
+
+			continue
+		}
+
+		// Success — stop retrying
+		break
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("postgres - NewPostgres - connAttempts == 0: %w", err)
+		return nil, fmt.Errorf("postgres - NewPostgres - all connection attempts failed: %w", err)
 	}
+
+	db.SetMaxOpenConns(pg.maxPoolSize)
+	db.SetConnMaxLifetime(_defaultConnMaxLifetime)
+
+	pg.DB = db
 
 	return pg, nil
 }
 
-// Close -.
+// Close closes the database connection.
 func (p *Postgres) Close() {
-	if p.Pool != nil {
-		p.Pool.Close()
+	if p.DB != nil {
+		_ = p.DB.Close()
 	}
 }

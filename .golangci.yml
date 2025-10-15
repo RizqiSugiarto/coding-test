@@ -104,6 +104,11 @@ linters:
           - paralleltest
         path: integration-test
       - linters:
+          - paralleltest
+          - dupl
+          - funlen
+        path: _test\.go
+      - linters:
           - godot
         path: internal/controller/http
     paths:
