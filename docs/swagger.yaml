@@ -20,6 +20,18 @@ definitions:
     required:
     - name
     type: object
+  request.CustomPage:
+    properties:
+      content:
+        example: <h1>About Us</h1><p>This is our about page...</p>
+        type: string
+      custom_url:
+        example: /about-us
+        type: string
+    required:
+    - content
+    - custom_url
+    type: object
   request.News:
     properties:
       category_id:
@@ -43,6 +55,18 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  request.UpdateCustomPage:
+    properties:
+      content:
+        example: <h1>About Company</h1><p>Updated content...</p>
+        type: string
+      custom_url:
+        example: /about-company
+        type: string
+    required:
+    - content
+    - custom_url
     type: object
   request.UpdateNews:
     properties:
@@ -458,6 +482,167 @@ paths:
       summary: Update a news article
       tags:
       - News
+  /pages:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all custom pages
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of custom pages
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get all custom pages
+      tags:
+      - CustomPages
+    post:
+      consumes:
+      - application/json
+      description: Create a new custom page (requires authentication)
+      parameters:
+      - description: Page information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.CustomPage'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Page created successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new custom page
+      tags:
+      - CustomPages
+  /pages/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a custom page by ID (requires authentication)
+      parameters:
+      - description: Page ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Page deleted successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Page not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a custom page
+      tags:
+      - CustomPages
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a single custom page by its ID
+      parameters:
+      - description: Page ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Page detail
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Page not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get custom page by ID
+      tags:
+      - CustomPages
+    put:
+      consumes:
+      - application/json
+      description: Update an existing custom page (requires authentication)
+      parameters:
+      - description: Page ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated page information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateCustomPage'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Page updated successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Page not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a custom page
+      tags:
+      - CustomPages
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.

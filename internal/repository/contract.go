@@ -26,3 +26,11 @@ type NewsRepo interface {
 	Update(ctx context.Context, news *entity.News) error
 	Delete(ctx context.Context, id string) error
 }
+
+type CustomPageRepo interface {
+	Create(ctx context.Context, page *entity.CustomPage) (*entity.CustomPage, error)
+	GetByID(ctx context.Context, id string) (*entity.CustomPage, error)
+	GetAll(ctx context.Context) ([]entity.CustomPage, error)
+	Update(ctx context.Context, page *entity.CustomPage) error
+	Delete(ctx context.Context, id string) error
+}
