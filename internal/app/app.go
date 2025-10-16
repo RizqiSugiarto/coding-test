@@ -40,10 +40,12 @@ func Run(cfg *config.Config) {
 	// Repo
 	userRepo := repoPg.NewPostgresUserRepo(pg)
 	categoryRepo := repoPg.NewPostgresCategoryRepo(pg)
+	newsRepo := repoPg.NewPostgresNewsRepo(pg)
 
 	// Usecase
 	authUc := usecase.NewAuthUseCase(userRepo, jwtManager)
 	categoryUc := usecase.NewCategoryUseCase(categoryRepo)
+	newsUc := usecase.NewNewsUseCase(newsRepo)
 
 	initMigration(pgURL)
 
@@ -53,7 +55,7 @@ func Run(cfg *config.Config) {
 
 	// HTTP Server
 	handler := gin.New()
-	v1.NewRouter(handler, log, authUc, categoryUc, jwtManager)
+	v1.NewRouter(handler, log, authUc, categoryUc, newsUc, jwtManager)
 	httpServer := httpserver.New(handler, httpserver.Port(cfg.HTTP.Port))
 
 	// Waiting signal

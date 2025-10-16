@@ -17,3 +17,11 @@ type Category interface {
 	Update(ctx context.Context, id string, req *dto.UpdateCategoryRequestDTO) error
 	Delete(ctx context.Context, id string) error
 }
+
+type News interface {
+	Create(ctx context.Context, authorID string, req *dto.CreateNewsRequestDTO) (*dto.NewsResponseDTO, error)
+	GetByID(ctx context.Context, id string) (*dto.NewsResponseDTO, error)
+	GetAll(ctx context.Context) ([]dto.NewsResponseDTO, error)
+	Update(ctx context.Context, id string, req *dto.UpdateNewsRequestDTO) error
+	Delete(ctx context.Context, id string) error
+}
