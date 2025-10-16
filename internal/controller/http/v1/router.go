@@ -31,6 +31,7 @@ func NewRouter(
 	categoryUc usecase.Category,
 	newsUc usecase.News,
 	customPageUc usecase.CustomPage,
+	commentUc usecase.Comment,
 	jwtManager jwt.Manager,
 ) {
 	// Options
@@ -52,5 +53,6 @@ func NewRouter(
 		newCategoryRoutes(h, categoryUc, log, authMiddleware)
 		newNewsRoutes(h, newsUc, log, authMiddleware)
 		newCustomPageRoutes(h, customPageUc, log, authMiddleware)
+		newCommentRoutes(h, commentUc, log)
 	}
 }

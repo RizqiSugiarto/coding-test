@@ -571,6 +571,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/news/{id}/comments": {
+            "post": {
+                "description": "Create a new comment on a specific news article",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Comments"
+                ],
+                "summary": "Create a comment on a news article",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "News ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Comment information",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.Comment"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Comment created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request payload",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/pages": {
             "get": {
                 "description": "Retrieve a list of all custom pages",
@@ -848,6 +901,23 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "Technology"
+                }
+            }
+        },
+        "request.Comment": {
+            "type": "object",
+            "required": [
+                "comment",
+                "name"
+            ],
+            "properties": {
+                "comment": {
+                    "type": "string",
+                    "example": "This is a great article!"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
                 }
             }
         },

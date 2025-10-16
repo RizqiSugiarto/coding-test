@@ -35,3 +35,7 @@ type CustomPage interface {
 	Update(ctx context.Context, id string, req *dto.UpdateCustomPageRequestDTO) error
 	Delete(ctx context.Context, id string) error
 }
+
+type Comment interface {
+	Create(ctx context.Context, req *dto.CreateCommentRequestDTO) error
+}

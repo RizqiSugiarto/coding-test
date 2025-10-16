@@ -34,3 +34,7 @@ type CustomPageRepo interface {
 	Update(ctx context.Context, page *entity.CustomPage) error
 	Delete(ctx context.Context, id string) error
 }
+
+type CommentRepo interface {
+	Create(ctx context.Context, comment *entity.Comment) error
+}
