@@ -7,7 +7,8 @@ import (
 )
 
 type Auth interface {
-	Login(ctx context.Context, req dto.LoginRequestDTO) (*dto.LoginResponseDTO, error)
+	Login(ctx context.Context, req dto.LoginRequestDTO) (*dto.AuthResponseDTO, error)
+	Refresh(ctx context.Context, refreshToken string) (*dto.AuthResponseDTO, error)
 }
 
 type Category interface {

@@ -5,7 +5,11 @@ type LoginRequestDTO struct {
 	Password string `json:"password"`
 }
 
-type LoginResponseDTO struct {
+type RefreshRequestDTO struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+type AuthResponseDTO struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 }

@@ -67,7 +67,7 @@ func (j *manager) ParseAndValidateRefreshToken(tokenStr string) (jwt.MapClaims, 
 		return []byte(j.config.RefreshTokenSecretKey), nil
 	})
 	if err != nil || !token.Valid {
-		return nil, err
+		return nil, apperror.ErrInvalidToken
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)

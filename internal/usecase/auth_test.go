@@ -14,8 +14,11 @@ import (
 )
 
 const (
-	testPassword    = "password123"
-	testAccessToken = "access.token.here"
+	testPassword          = "password123"
+	testAccessToken       = "access.token.here"
+	testValidRefreshToken = "valid.refresh.token"
+	testUserID            = "user-123"
+	testNewRefreshToken   = "new.refresh.token"
 )
 
 // MockUserRepo is a mock implementation of repository.UserRepo.
@@ -399,6 +402,206 @@ func TestAuthUseCase_Login(t *testing.T) {
 		mockUserRepo.AssertExpectations(t)
 		mockJWTService.AssertNotCalled(t, "GenerateAccessToken")
 		mockJWTService.AssertNotCalled(t, "GenerateRefreshToken")
+	})
+}
+
+func TestAuthUseCase_Refresh(t *testing.T) {
+	t.Run("success - valid refresh token", func(t *testing.T) {
+		// Arrange
+		mockUserRepo := new(MockUserRepo)
+		mockJWTManager := new(MockJWTManager)
+		authUseCase := NewAuthUseCase(mockUserRepo, mockJWTManager)
+
+		ctx := context.Background()
+		refreshToken := testValidRefreshToken
+		userID := testUserID
+
+		claims := jwt.MapClaims{
+			"user_id": userID,
+		}
+
+		expectedAccessToken := testAccessToken
+		expectedRefreshToken := testNewRefreshToken
+
+		// Mock expectations
+		mockJWTManager.On("ParseAndValidateRefreshToken", refreshToken).Return(claims, nil)
+		mockJWTManager.On("GenerateAccessToken", userID).Return(expectedAccessToken, nil)
+		mockJWTManager.On("GenerateRefreshToken", userID).Return(expectedRefreshToken, nil)
+
+		// Act
+		resp, err := authUseCase.Refresh(ctx, refreshToken)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, expectedAccessToken, resp.AccessToken)
+		assert.Equal(t, expectedRefreshToken, resp.RefreshToken)
+		mockJWTManager.AssertExpectations(t)
+	})
+
+	t.Run("error - invalid refresh token", func(t *testing.T) {
+		// Arrange
+		mockUserRepo := new(MockUserRepo)
+		mockJWTManager := new(MockJWTManager)
+		authUseCase := NewAuthUseCase(mockUserRepo, mockJWTManager)
+
+		ctx := context.Background()
+		refreshToken := "invalid.refresh.token"
+
+		// Mock expectations
+		mockJWTManager.On("ParseAndValidateRefreshToken", refreshToken).Return(nil, apperror.ErrInvalidToken)
+
+		// Act
+		resp, err := authUseCase.Refresh(ctx, refreshToken)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+		assert.Equal(t, apperror.ErrInvalidToken, err)
+		mockJWTManager.AssertExpectations(t)
+		mockJWTManager.AssertNotCalled(t, "GenerateAccessToken")
+		mockJWTManager.AssertNotCalled(t, "GenerateRefreshToken")
+	})
+
+	t.Run("error - expired refresh token", func(t *testing.T) {
+		// Arrange
+		mockUserRepo := new(MockUserRepo)
+		mockJWTManager := new(MockJWTManager)
+		authUseCase := NewAuthUseCase(mockUserRepo, mockJWTManager)
+
+		ctx := context.Background()
+		refreshToken := "expired.refresh.token"
+
+		// Mock expectations
+		mockJWTManager.On("ParseAndValidateRefreshToken", refreshToken).Return(nil, apperror.ErrInvalidToken)
+
+		// Act
+		resp, err := authUseCase.Refresh(ctx, refreshToken)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+		assert.Equal(t, apperror.ErrInvalidToken, err)
+		mockJWTManager.AssertExpectations(t)
+		mockJWTManager.AssertNotCalled(t, "GenerateAccessToken")
+		mockJWTManager.AssertNotCalled(t, "GenerateRefreshToken")
+	})
+
+	t.Run("error - access token generation fails", func(t *testing.T) {
+		// Arrange
+		mockUserRepo := new(MockUserRepo)
+		mockJWTManager := new(MockJWTManager)
+		authUseCase := NewAuthUseCase(mockUserRepo, mockJWTManager)
+
+		ctx := context.Background()
+		refreshToken := testValidRefreshToken
+		userID := testUserID
+
+		claims := jwt.MapClaims{
+			"user_id": userID,
+		}
+
+		// Mock expectations
+		mockJWTManager.On("ParseAndValidateRefreshToken", refreshToken).Return(claims, nil)
+		mockJWTManager.On("GenerateAccessToken", userID).Return("", apperror.ErrGenerateAccessToken)
+
+		// Act
+		resp, err := authUseCase.Refresh(ctx, refreshToken)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+		assert.Equal(t, apperror.ErrGenerateAccessToken, err)
+		mockJWTManager.AssertExpectations(t)
+		mockJWTManager.AssertNotCalled(t, "GenerateRefreshToken")
+	})
+
+	t.Run("error - refresh token generation fails", func(t *testing.T) {
+		// Arrange
+		mockUserRepo := new(MockUserRepo)
+		mockJWTManager := new(MockJWTManager)
+		authUseCase := NewAuthUseCase(mockUserRepo, mockJWTManager)
+
+		ctx := context.Background()
+		refreshToken := testValidRefreshToken
+		userID := testUserID
+
+		claims := jwt.MapClaims{
+			"user_id": userID,
+		}
+
+		expectedAccessToken := testAccessToken
+
+		// Mock expectations
+		mockJWTManager.On("ParseAndValidateRefreshToken", refreshToken).Return(claims, nil)
+		mockJWTManager.On("GenerateAccessToken", userID).Return(expectedAccessToken, nil)
+		mockJWTManager.On("GenerateRefreshToken", userID).Return("", apperror.ErrGenerateRefreshToken)
+
+		// Act
+		resp, err := authUseCase.Refresh(ctx, refreshToken)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+		assert.Equal(t, apperror.ErrGenerateRefreshToken, err)
+		mockJWTManager.AssertExpectations(t)
+	})
+
+	t.Run("error - invalid token type", func(t *testing.T) {
+		// Arrange
+		mockUserRepo := new(MockUserRepo)
+		mockJWTManager := new(MockJWTManager)
+		authUseCase := NewAuthUseCase(mockUserRepo, mockJWTManager)
+
+		ctx := context.Background()
+		refreshToken := "access.token.instead.of.refresh"
+
+		// Mock expectations
+		mockJWTManager.On("ParseAndValidateRefreshToken", refreshToken).Return(nil, apperror.ErrInvalidTokenType)
+
+		// Act
+		resp, err := authUseCase.Refresh(ctx, refreshToken)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+		assert.Equal(t, apperror.ErrInvalidTokenType, err)
+		mockJWTManager.AssertExpectations(t)
+		mockJWTManager.AssertNotCalled(t, "GenerateAccessToken")
+		mockJWTManager.AssertNotCalled(t, "GenerateRefreshToken")
+	})
+
+	t.Run("success - refresh with different user ID format", func(t *testing.T) {
+		// Arrange
+		mockUserRepo := new(MockUserRepo)
+		mockJWTManager := new(MockJWTManager)
+		authUseCase := NewAuthUseCase(mockUserRepo, mockJWTManager)
+
+		ctx := context.Background()
+		refreshToken := testValidRefreshToken
+		userID := "550e8400-e29b-41d4-a716-446655440000" // UUID format
+
+		claims := jwt.MapClaims{
+			"user_id": userID,
+		}
+
+		expectedAccessToken := "new.access.token"
+		expectedRefreshToken := testNewRefreshToken
+
+		// Mock expectations
+		mockJWTManager.On("ParseAndValidateRefreshToken", refreshToken).Return(claims, nil)
+		mockJWTManager.On("GenerateAccessToken", userID).Return(expectedAccessToken, nil)
+		mockJWTManager.On("GenerateRefreshToken", userID).Return(expectedRefreshToken, nil)
+
+		// Act
+		resp, err := authUseCase.Refresh(ctx, refreshToken)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, expectedAccessToken, resp.AccessToken)
+		assert.Equal(t, expectedRefreshToken, resp.RefreshToken)
+		mockJWTManager.AssertExpectations(t)
 	})
 }
 
