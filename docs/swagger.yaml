@@ -60,6 +60,13 @@ definitions:
     - content
     - title
     type: object
+  request.Refresh:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
   request.UpdateCategory:
     properties:
       name:
@@ -170,6 +177,40 @@ paths:
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       summary: User login
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Generate a new access token using a valid refresh token.
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.Refresh'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: New JWT access token
+          schema:
+            $ref: '#/definitions/response.LoginSuccessResponse'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Invalid or expired refresh token
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Refresh access token
       tags:
       - Auth
   /categories:

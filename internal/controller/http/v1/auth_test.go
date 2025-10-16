@@ -20,13 +20,27 @@ type MockAuthUseCase struct {
 	mock.Mock
 }
 
-func (m *MockAuthUseCase) Login(ctx context.Context, req dto.LoginRequestDTO) (*dto.LoginResponseDTO, error) {
+func (m *MockAuthUseCase) Login(ctx context.Context, req dto.LoginRequestDTO) (*dto.AuthResponseDTO, error) {
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 
-	result, ok := args.Get(0).(*dto.LoginResponseDTO)
+	result, ok := args.Get(0).(*dto.AuthResponseDTO)
+	if !ok {
+		return nil, args.Error(1)
+	}
+
+	return result, args.Error(1)
+}
+
+func (m *MockAuthUseCase) Refresh(ctx context.Context, refreshToken string) (*dto.AuthResponseDTO, error) {
+	args := m.Called(ctx, refreshToken)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+
+	result, ok := args.Get(0).(*dto.AuthResponseDTO)
 	if !ok {
 		return nil, args.Error(1)
 	}
@@ -87,7 +101,7 @@ func TestAuthRoutes_Login(t *testing.T) {
 		bodyBytes, err := json.Marshal(requestBody)
 		assert.NoError(t, err)
 
-		expectedResponse := &dto.LoginResponseDTO{
+		expectedResponse := &dto.AuthResponseDTO{
 			AccessToken:  "access.token.here",
 			RefreshToken: "refresh.token.here",
 		}
@@ -446,7 +460,7 @@ func TestAuthRoutes_Login(t *testing.T) {
 		bodyBytes, err := json.Marshal(requestBody)
 		assert.NoError(t, err)
 
-		expectedResponse := &dto.LoginResponseDTO{
+		expectedResponse := &dto.AuthResponseDTO{
 			AccessToken:  "access.token.special",
 			RefreshToken: "refresh.token.special",
 		}
@@ -459,6 +473,399 @@ func TestAuthRoutes_Login(t *testing.T) {
 
 		// Act
 		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		// Assert
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var response map[string]interface{}
+
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.NotNil(t, response["meta"])
+		assert.NotNil(t, response["data"])
+
+		mockAuthUseCase.AssertExpectations(t)
+	})
+}
+
+func TestAuthRoutes_Refresh(t *testing.T) {
+	t.Run("success - valid refresh token", func(t *testing.T) {
+		// Arrange
+		mockAuthUseCase := new(MockAuthUseCase)
+		mockLogger := new(MockLogger)
+
+		router := setupTestRouter()
+		authRouter := &authRoutes{
+			auth: mockAuthUseCase,
+			log:  mockLogger,
+		}
+
+		router.POST("/auth/refresh", authRouter.Refresh)
+
+		requestBody := map[string]string{
+			"refresh_token": "valid.refresh.token.here",
+		}
+		bodyBytes, err := json.Marshal(requestBody)
+		assert.NoError(t, err)
+
+		expectedResponse := &dto.AuthResponseDTO{
+			AccessToken:  "new.access.token",
+			RefreshToken: "new.refresh.token",
+		}
+
+		// Mock expectations
+		mockAuthUseCase.On("Refresh", mock.Anything, "valid.refresh.token.here").Return(expectedResponse, nil)
+
+		// Act
+		req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		// Assert
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var response map[string]interface{}
+
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.NotNil(t, response["meta"])
+		assert.NotNil(t, response["data"])
+
+		meta, ok := response["meta"].(map[string]interface{})
+		assert.True(t, ok, "meta should be a map")
+		assert.Equal(t, float64(200), meta["code"])
+		assert.Equal(t, "OK", meta["message"])
+
+		data, ok := response["data"].(map[string]interface{})
+		assert.True(t, ok, "data should be a map")
+
+		token, ok := data["token"].(map[string]interface{})
+		assert.True(t, ok, "token should be a map")
+		assert.Equal(t, expectedResponse.AccessToken, token["access_token"])
+		assert.Equal(t, expectedResponse.RefreshToken, token["refresh_token"])
+
+		mockAuthUseCase.AssertExpectations(t)
+	})
+
+	t.Run("error - invalid request payload (malformed JSON)", func(t *testing.T) {
+		// Arrange
+		mockAuthUseCase := new(MockAuthUseCase)
+		mockLogger := new(MockLogger)
+
+		router := setupTestRouter()
+		authRouter := &authRoutes{
+			auth: mockAuthUseCase,
+			log:  mockLogger,
+		}
+
+		router.POST("/auth/refresh", authRouter.Refresh)
+
+		// Malformed JSON
+		bodyBytes := []byte(`{"refresh_token":}`)
+
+		// Mock expectations
+		mockLogger.On("Error", mock.Anything, mock.Anything).Return()
+
+		// Act
+		req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		// Assert
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		var response map[string]interface{}
+
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.NotNil(t, response["meta"])
+
+		meta, ok := response["meta"].(map[string]interface{})
+		assert.True(t, ok, "meta should be a map")
+		assert.Equal(t, float64(400), meta["code"])
+		assert.Equal(t, "Invalid request payload", meta["message"])
+
+		mockAuthUseCase.AssertNotCalled(t, "Refresh")
+		mockLogger.AssertExpectations(t)
+	})
+
+	t.Run("error - missing refresh token", func(t *testing.T) {
+		// Arrange
+		mockAuthUseCase := new(MockAuthUseCase)
+		mockLogger := new(MockLogger)
+
+		router := setupTestRouter()
+		authRouter := &authRoutes{
+			auth: mockAuthUseCase,
+			log:  mockLogger,
+		}
+
+		router.POST("/auth/refresh", authRouter.Refresh)
+
+		// Empty request body
+		requestBody := map[string]string{}
+		bodyBytes, err := json.Marshal(requestBody)
+		assert.NoError(t, err)
+
+		// Mock expectations
+		mockLogger.On("Error", mock.Anything, mock.Anything).Return()
+
+		// Act
+		req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		// Assert
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		var response map[string]interface{}
+
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.NotNil(t, response["meta"])
+
+		meta, ok := response["meta"].(map[string]interface{})
+		assert.True(t, ok, "meta should be a map")
+		assert.Equal(t, float64(400), meta["code"])
+		assert.Equal(t, "Invalid request payload", meta["message"])
+
+		mockAuthUseCase.AssertNotCalled(t, "Refresh")
+		mockLogger.AssertExpectations(t)
+	})
+
+	t.Run("error - invalid token type", func(t *testing.T) {
+		// Arrange
+		mockAuthUseCase := new(MockAuthUseCase)
+		mockLogger := new(MockLogger)
+
+		router := setupTestRouter()
+		authRouter := &authRoutes{
+			auth: mockAuthUseCase,
+			log:  mockLogger,
+		}
+
+		router.POST("/auth/refresh", authRouter.Refresh)
+
+		requestBody := map[string]string{
+			"refresh_token": "access.token.instead.of.refresh",
+		}
+		bodyBytes, err := json.Marshal(requestBody)
+		assert.NoError(t, err)
+
+		// Mock expectations
+		mockAuthUseCase.On("Refresh", mock.Anything, "access.token.instead.of.refresh").Return(nil, apperror.ErrInvalidTokenType)
+
+		// Act
+		req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		// Assert
+		assert.Equal(t, http.StatusBadGateway, w.Code)
+
+		var response map[string]interface{}
+
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.NotNil(t, response["meta"])
+
+		meta, ok := response["meta"].(map[string]interface{})
+		assert.True(t, ok, "meta should be a map")
+		assert.Equal(t, float64(502), meta["code"])
+		assert.Equal(t, "Invalid token type", meta["message"])
+
+		mockAuthUseCase.AssertExpectations(t)
+	})
+
+	t.Run("error - expired refresh token", func(t *testing.T) {
+		// Arrange
+		mockAuthUseCase := new(MockAuthUseCase)
+		mockLogger := new(MockLogger)
+
+		router := setupTestRouter()
+		authRouter := &authRoutes{
+			auth: mockAuthUseCase,
+			log:  mockLogger,
+		}
+
+		router.POST("/auth/refresh", authRouter.Refresh)
+
+		requestBody := map[string]string{
+			"refresh_token": "expired.refresh.token",
+		}
+		bodyBytes, err := json.Marshal(requestBody)
+		assert.NoError(t, err)
+
+		// Mock expectations
+		mockAuthUseCase.On("Refresh", mock.Anything, "expired.refresh.token").Return(nil, apperror.ErrInvalidToken)
+
+		// Act
+		req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		// Assert
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+		var response map[string]interface{}
+
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.NotNil(t, response["meta"])
+
+		meta, ok := response["meta"].(map[string]interface{})
+		assert.True(t, ok, "meta should be a map")
+		assert.Equal(t, float64(500), meta["code"])
+		assert.Equal(t, "Internal server error", meta["message"])
+
+		mockAuthUseCase.AssertExpectations(t)
+	})
+
+	t.Run("error - invalid refresh token", func(t *testing.T) {
+		// Arrange
+		mockAuthUseCase := new(MockAuthUseCase)
+		mockLogger := new(MockLogger)
+
+		router := setupTestRouter()
+		authRouter := &authRoutes{
+			auth: mockAuthUseCase,
+			log:  mockLogger,
+		}
+
+		router.POST("/auth/refresh", authRouter.Refresh)
+
+		requestBody := map[string]string{
+			"refresh_token": "invalid.refresh.token",
+		}
+		bodyBytes, err := json.Marshal(requestBody)
+		assert.NoError(t, err)
+
+		// Mock expectations
+		mockAuthUseCase.On("Refresh", mock.Anything, "invalid.refresh.token").Return(nil, apperror.ErrInvalidToken)
+
+		// Act
+		req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		// Assert
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+		var response map[string]interface{}
+
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.NotNil(t, response["meta"])
+
+		meta, ok := response["meta"].(map[string]interface{})
+		assert.True(t, ok, "meta should be a map")
+		assert.Equal(t, float64(500), meta["code"])
+		assert.Equal(t, "Internal server error", meta["message"])
+
+		mockAuthUseCase.AssertExpectations(t)
+	})
+
+	t.Run("error - token generation fails", func(t *testing.T) {
+		// Arrange
+		mockAuthUseCase := new(MockAuthUseCase)
+		mockLogger := new(MockLogger)
+
+		router := setupTestRouter()
+		authRouter := &authRoutes{
+			auth: mockAuthUseCase,
+			log:  mockLogger,
+		}
+
+		router.POST("/auth/refresh", authRouter.Refresh)
+
+		requestBody := map[string]string{
+			"refresh_token": "valid.refresh.token",
+		}
+		bodyBytes, err := json.Marshal(requestBody)
+		assert.NoError(t, err)
+
+		// Mock expectations
+		mockAuthUseCase.On("Refresh", mock.Anything, "valid.refresh.token").Return(nil, apperror.ErrGenerateAccessToken)
+
+		// Act
+		req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		// Assert
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+		var response map[string]interface{}
+
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.NotNil(t, response["meta"])
+
+		meta, ok := response["meta"].(map[string]interface{})
+		assert.True(t, ok, "meta should be a map")
+		assert.Equal(t, float64(500), meta["code"])
+		assert.Equal(t, "Internal server error", meta["message"])
+
+		mockAuthUseCase.AssertExpectations(t)
+	})
+
+	t.Run("success - refresh with long token", func(t *testing.T) {
+		// Arrange
+		mockAuthUseCase := new(MockAuthUseCase)
+		mockLogger := new(MockLogger)
+
+		router := setupTestRouter()
+		authRouter := &authRoutes{
+			auth: mockAuthUseCase,
+			log:  mockLogger,
+		}
+
+		router.POST("/auth/refresh", authRouter.Refresh)
+
+		//nolint:gosec // This is a test token, not a real credential
+		longToken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNTUwZTg0MDAtZTI5Yi00MWQ0LWE3MTYtNDQ2NjU1NDQwMDAwIiwiZXhwIjoxNzM0MzI4MDAwfQ.abcdefghijklmnopqrstuvwxyz1234567890"
+		requestBody := map[string]string{
+			"refresh_token": longToken,
+		}
+		bodyBytes, err := json.Marshal(requestBody)
+		assert.NoError(t, err)
+
+		expectedResponse := &dto.AuthResponseDTO{
+			AccessToken:  "new.access.token",
+			RefreshToken: "new.refresh.token",
+		}
+
+		// Mock expectations
+		mockAuthUseCase.On("Refresh", mock.Anything, longToken).Return(expectedResponse, nil)
+
+		// Act
+		req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
 
 		w := httptest.NewRecorder()
