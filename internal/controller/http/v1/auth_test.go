@@ -678,7 +678,7 @@ func TestAuthRoutes_Refresh(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		// Assert
-		assert.Equal(t, http.StatusBadGateway, w.Code)
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
 
 		var response map[string]interface{}
 
@@ -688,7 +688,7 @@ func TestAuthRoutes_Refresh(t *testing.T) {
 
 		meta, ok := response["meta"].(map[string]interface{})
 		assert.True(t, ok, "meta should be a map")
-		assert.Equal(t, float64(502), meta["code"])
+		assert.Equal(t, float64(401), meta["code"])
 		assert.Equal(t, "Invalid token type", meta["message"])
 
 		mockAuthUseCase.AssertExpectations(t)
@@ -725,7 +725,7 @@ func TestAuthRoutes_Refresh(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		// Assert
-		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
 
 		var response map[string]interface{}
 
@@ -735,8 +735,8 @@ func TestAuthRoutes_Refresh(t *testing.T) {
 
 		meta, ok := response["meta"].(map[string]interface{})
 		assert.True(t, ok, "meta should be a map")
-		assert.Equal(t, float64(500), meta["code"])
-		assert.Equal(t, "Internal server error", meta["message"])
+		assert.Equal(t, float64(401), meta["code"])
+		assert.Equal(t, "Invalid token", meta["message"])
 
 		mockAuthUseCase.AssertExpectations(t)
 	})
@@ -772,7 +772,7 @@ func TestAuthRoutes_Refresh(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		// Assert
-		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
 
 		var response map[string]interface{}
 
@@ -782,8 +782,8 @@ func TestAuthRoutes_Refresh(t *testing.T) {
 
 		meta, ok := response["meta"].(map[string]interface{})
 		assert.True(t, ok, "meta should be a map")
-		assert.Equal(t, float64(500), meta["code"])
-		assert.Equal(t, "Internal server error", meta["message"])
+		assert.Equal(t, float64(401), meta["code"])
+		assert.Equal(t, "Invalid token", meta["message"])
 
 		mockAuthUseCase.AssertExpectations(t)
 	})
@@ -809,6 +809,8 @@ func TestAuthRoutes_Refresh(t *testing.T) {
 
 		// Mock expectations
 		mockAuthUseCase.On("Refresh", mock.Anything, "valid.refresh.token").Return(nil, apperror.ErrGenerateAccessToken)
+
+		mockLogger.On("Error", mock.Anything, mock.Anything).Return()
 
 		// Act
 		req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(bodyBytes))
