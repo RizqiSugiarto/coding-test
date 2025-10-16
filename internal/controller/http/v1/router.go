@@ -29,6 +29,7 @@ func NewRouter(
 	log logger.Interface,
 	authUc usecase.Auth,
 	categoryUc usecase.Category,
+	newsUc usecase.News,
 	jwtManager jwt.Manager,
 ) {
 	// Options
@@ -48,5 +49,6 @@ func NewRouter(
 	{
 		newAuthRoutes(h, authUc, log)
 		newCategoryRoutes(h, categoryUc, log, authMiddleware)
+		newNewsRoutes(h, newsUc, log, authMiddleware)
 	}
 }

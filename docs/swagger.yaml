@@ -20,6 +20,22 @@ definitions:
     required:
     - name
     type: object
+  request.News:
+    properties:
+      category_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      content:
+        example: This is the full content of the news article...
+        type: string
+      title:
+        example: 'Breaking News: Technology Advances'
+        type: string
+    required:
+    - category_id
+    - content
+    - title
+    type: object
   request.UpdateCategory:
     properties:
       name:
@@ -27,6 +43,22 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  request.UpdateNews:
+    properties:
+      category_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      content:
+        example: This is the updated content...
+        type: string
+      title:
+        example: Updated News Title
+        type: string
+    required:
+    - category_id
+    - content
+    - title
     type: object
   response.ErrorResponse:
     properties:
@@ -265,6 +297,167 @@ paths:
       summary: Update a category
       tags:
       - Categories
+  /news:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all news articles
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of news
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get all news
+      tags:
+      - News
+    post:
+      consumes:
+      - application/json
+      description: Create a new news article (requires authentication)
+      parameters:
+      - description: News information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.News'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: News created successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new news article
+      tags:
+      - News
+  /news/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a news article by ID (requires authentication)
+      parameters:
+      - description: News ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: News deleted successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: News not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a news article
+      tags:
+      - News
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a single news article by its ID
+      parameters:
+      - description: News ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: News detail
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: News not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get news by ID
+      tags:
+      - News
+    put:
+      consumes:
+      - application/json
+      description: Update an existing news article (requires authentication)
+      parameters:
+      - description: News ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated news information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateNews'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: News updated successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: News not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a news article
+      tags:
+      - News
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.

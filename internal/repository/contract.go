@@ -18,3 +18,11 @@ type CategoryRepo interface {
 	Update(ctx context.Context, category *entity.Category) error
 	Delete(ctx context.Context, id string) error
 }
+
+type NewsRepo interface {
+	Create(ctx context.Context, news *entity.News) (*entity.News, error)
+	GetByID(ctx context.Context, id string) (*entity.News, error)
+	GetAll(ctx context.Context) ([]entity.News, error)
+	Update(ctx context.Context, news *entity.News) error
+	Delete(ctx context.Context, id string) error
+}
