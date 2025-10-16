@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -59,7 +60,7 @@ func NewConfig() (*Config, error) {
 
 	err := godotenv.Load()
 	if err != nil {
-		return nil, fmt.Errorf("load config error: %w", err)
+		log.Printf("error load env file: %s", err)
 	}
 
 	err = cleanenv.ReadEnv(cfg)
