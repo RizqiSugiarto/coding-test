@@ -5,7 +5,9 @@ import (
 
 	// Import generated swagger docs.
 	_ "github.com/RizqiSugiarto/coding-test/docs"
+	"github.com/RizqiSugiarto/coding-test/internal/controller/http/v1/middleware"
 	"github.com/RizqiSugiarto/coding-test/internal/usecase"
+	"github.com/RizqiSugiarto/coding-test/pkg/jwt"
 	"github.com/RizqiSugiarto/coding-test/pkg/logger"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -18,10 +20,16 @@ import (
 // @version     0.0.1
 // @host        localhost:8080
 // @BasePath    /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 func NewRouter(
 	handler *gin.Engine,
 	log logger.Interface,
 	authUc usecase.Auth,
+	categoryUc usecase.Category,
+	jwtManager jwt.Manager,
 ) {
 	// Options
 	handler.Use(gin.Logger())
@@ -32,9 +40,13 @@ func NewRouter(
 
 	handler.GET("/healthz", func(c *gin.Context) { c.Status(http.StatusOK) })
 
+	// Middleware
+	authMiddleware := middleware.AuthMiddleware(jwtManager)
+
 	// Routers
 	h := handler.Group("api/v1")
 	{
 		newAuthRoutes(h, authUc, log)
+		newCategoryRoutes(h, categoryUc, log, authMiddleware)
 	}
 }
