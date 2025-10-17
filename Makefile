@@ -23,6 +23,14 @@ linter-golangci: ## Check Go code using golangci-lint
 	golangci-lint run
 .PHONY: linter-golangci
 
+swag-v1: ## Initialize Swagger docs for v1
+	swag init -g internal/controller/http/v1/router.go
+.PHONY: swag-v1
+
+test: ### run test
+	go test -v -race -covermode atomic -coverprofile=coverage.txt ./internal/...
+.PHONY: test
+
 up: ## Start Docker containers
 	docker-compose up -d
 .PHONY: up

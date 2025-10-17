@@ -1,0 +1,740 @@
+basePath: /api/v1
+definitions:
+  request.Auth:
+    properties:
+      password:
+        example: Uuk2019Tyu
+        type: string
+      username:
+        example: Naruto
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  request.Category:
+    properties:
+      name:
+        example: Technology
+        type: string
+    required:
+    - name
+    type: object
+  request.Comment:
+    properties:
+      comment:
+        example: This is a great article!
+        type: string
+      name:
+        example: John Doe
+        type: string
+    required:
+    - comment
+    - name
+    type: object
+  request.CustomPage:
+    properties:
+      content:
+        example: <h1>About Us</h1><p>This is our about page...</p>
+        type: string
+      custom_url:
+        example: /about-us
+        type: string
+    required:
+    - content
+    - custom_url
+    type: object
+  request.News:
+    properties:
+      category_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      content:
+        example: This is the full content of the news article...
+        type: string
+      title:
+        example: 'Breaking News: Technology Advances'
+        type: string
+    required:
+    - category_id
+    - content
+    - title
+    type: object
+  request.Refresh:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  request.UpdateCategory:
+    properties:
+      name:
+        example: Updated Technology
+        type: string
+    required:
+    - name
+    type: object
+  request.UpdateCustomPage:
+    properties:
+      content:
+        example: <h1>About Company</h1><p>Updated content...</p>
+        type: string
+      custom_url:
+        example: /about-company
+        type: string
+    required:
+    - content
+    - custom_url
+    type: object
+  request.UpdateNews:
+    properties:
+      category_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      content:
+        example: This is the updated content...
+        type: string
+      title:
+        example: Updated News Title
+        type: string
+    required:
+    - category_id
+    - content
+    - title
+    type: object
+  response.ErrorResponse:
+    properties:
+      meta:
+        $ref: '#/definitions/response.Meta'
+    type: object
+  response.LoginSuccessData:
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+        type: string
+    type: object
+  response.LoginSuccessResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.LoginSuccessData'
+      meta:
+        $ref: '#/definitions/response.Meta'
+    type: object
+  response.Meta:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
+  response.Response:
+    properties:
+      data: {}
+      meta:
+        $ref: '#/definitions/response.Meta'
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  title: Cms API API
+  version: 0.0.1
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with username and password, returning a JWT token
+        if valid.
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.Auth'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: JWT token
+          schema:
+            $ref: '#/definitions/response.LoginSuccessResponse'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Invalid username or password
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: User login
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Generate a new access token using a valid refresh token.
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.Refresh'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: New JWT access token
+          schema:
+            $ref: '#/definitions/response.LoginSuccessResponse'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Invalid or expired refresh token
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Refresh access token
+      tags:
+      - Auth
+  /categories:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all categories
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of categories
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get all categories
+      tags:
+      - Categories
+    post:
+      consumes:
+      - application/json
+      description: Create a new category (requires authentication)
+      parameters:
+      - description: Category information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.Category'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Category created successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new category
+      tags:
+      - Categories
+  /categories/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a category by ID (requires authentication)
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Category deleted successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Category not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a category
+      tags:
+      - Categories
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a single category by its ID
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Category detail
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Category not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get category by ID
+      tags:
+      - Categories
+    put:
+      consumes:
+      - application/json
+      description: Update an existing category (requires authentication)
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated category information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateCategory'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Category updated successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Category not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a category
+      tags:
+      - Categories
+  /news:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all news articles
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of news
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get all news
+      tags:
+      - News
+    post:
+      consumes:
+      - application/json
+      description: Create a new news article (requires authentication)
+      parameters:
+      - description: News information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.News'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: News created successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new news article
+      tags:
+      - News
+  /news/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a news article by ID (requires authentication)
+      parameters:
+      - description: News ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: News deleted successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: News not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a news article
+      tags:
+      - News
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a single news article by its ID
+      parameters:
+      - description: News ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: News detail
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: News not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get news by ID
+      tags:
+      - News
+    put:
+      consumes:
+      - application/json
+      description: Update an existing news article (requires authentication)
+      parameters:
+      - description: News ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated news information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateNews'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: News updated successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: News not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a news article
+      tags:
+      - News
+  /news/{id}/comments:
+    post:
+      consumes:
+      - application/json
+      description: Create a new comment on a specific news article
+      parameters:
+      - description: News ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Comment information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.Comment'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Comment created successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Create a comment on a news article
+      tags:
+      - Comments
+  /pages:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all custom pages
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of custom pages
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get all custom pages
+      tags:
+      - CustomPages
+    post:
+      consumes:
+      - application/json
+      description: Create a new custom page (requires authentication)
+      parameters:
+      - description: Page information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.CustomPage'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Page created successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new custom page
+      tags:
+      - CustomPages
+  /pages/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a custom page by ID (requires authentication)
+      parameters:
+      - description: Page ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Page deleted successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Page not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a custom page
+      tags:
+      - CustomPages
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a single custom page by its ID
+      parameters:
+      - description: Page ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Page detail
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Page not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get custom page by ID
+      tags:
+      - CustomPages
+    put:
+      consumes:
+      - application/json
+      description: Update an existing custom page (requires authentication)
+      parameters:
+      - description: Page ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated page information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateCustomPage'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Page updated successfully
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Invalid request payload
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: Page not found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a custom page
+      tags:
+      - CustomPages
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
